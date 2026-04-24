@@ -2,9 +2,9 @@ import axios from "axios";
 
 export const fetchMessage = async () => {
   try {
-    const res = await axios.get(`${process.env.REACT_APP_API_URL}/hello`);
+    const res = await axios.get(`${import.meta.env.VITE_API_URL}/hello`);
     return res.data.message;
-  } catch (err) {
+  } catch {
     return "API not reachable";
   }
 };
