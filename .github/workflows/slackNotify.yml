@@ -19,52 +19,30 @@ jobs:
         run: |
           # 1. Setup variables
           STATUS="${{ job.status }}"
-          [ "$STATUS" == "success" ] && COLOR="#28a745" || COLOR="#dc3545"
-          [ "$STATUS" == "success" ] && ICON="✅" || ICON="❌"
+          if [[ "$STATUS" == "success" ]]; then
+            COLOR="#28a745"; ICON="✅"
+          else
+            COLOR="#dc3545"; ICON="❌"
+          fi
 
-          # 2. Build HTML without complex nested quotes
-          HTML="<html><body style='font-family:sans-serif;'>
-            <div style='background:$COLOR;color:white;padding:20px;text-align:center;border-radius:8px 8px 0 0;'>
-              <h1>$ICON Deployment $STATUS</h1>
-            </div>
-            <div style='padding:20px;border:1px solid #ddd;border-top:none;'>
-              <p><b>Repo:</b> ${{ github.repository }}</p>
-              <p><b>Branch:</b> ${{ github.ref_name }}</p>
-              <p><b>Build:</b> #${{ github.run_number }}</p>
-              <p><b>Commit:</b> ${{ github.sha }}</p>
-              <a href='${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' 
-                 style='display:inline-block;padding:10px 20px;background:#0366d6;color:white;text-decoration:none;border-radius:5px;'>View Logs</a>
-            </div>
-          </body></html>"
-
-          # 3. Use a Python script (pre-installed on GH Runners) to send. 
-          # This handles JSON encoding and headers perfectly.
-          python3 - <<EOF
-          import requests
-          import json
-          import os
-
-          api_key = os.getenv('BREVO_KEY')
-          url = "https://api.brevo.com/v3/smtp/email"
-          
-          payload = {
-              "sender": {"name": "nixNtronics CI", "email": "ajiahamed@gmail.com"},
-              "to": [{"email": "ajiahamed@live.com"}],
-              "subject": "$ICON $STATUS: ${{ github.repository }}",
-              "htmlContent": """$HTML"""
+          # 2. Build the JSON payload into a file to avoid shell escaping issues
+          # Note: Ensure the sender email is verified in your Brevo dashboard!
+          cat <<EOF > payload.json
+          {
+            "sender": {"name": "nixNtronics CI", "email": "ajiahamed@gmail.com"},
+            "to": [{"email": "ajiahamed@live.com"}],
+            "subject": "$ICON $STATUS: ${{ github.repository }}",
+            "htmlContent": "<html><body style='font-family:sans-serif;'><div style='background:$COLOR;color:white;padding:20px;text-align:center;border-radius:8px 8px 0 0;'><h1>$ICON Deployment $STATUS</h1></div><div style='padding:20px;border:1px solid #ddd;border-top:none;'><p><b>Repo:</b> ${{ github.repository }}</p><p><b>Branch:</b> ${{ github.ref_name }}</p><p><b>Build:</b> #${{ github.run_number }}</p><p><b>Commit:</b> ${{ github.sha }}</p><div style='margin-top:20px;text-align:center;'><a href='${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' style='background:#0366d6;color:white;padding:12px 24px;text-decoration:none;border-radius:5px;font-weight:bold;'>🔍 View Build Logs</a></div></div></body></html>"
           }
-          
-          headers = {
-              "accept": "application/json",
-              "content-type": "application/json",
-              "api-key": api_key
-          }
-
-          response = requests.post(url, headers=headers, data=json.dumps(payload))
-          print(response.text)
-          if response.status_code != 201:
-              exit(1)
           EOF
+
+          # 3. Execute curl using the file
+          curl --request POST \
+            --url https://api.brevo.com/v3/smtp/email \
+            --header "accept: application/json" \
+            --header "content-type: application/json" \
+            --header "api-key: $BREVO_KEY" \
+            --data @payload.json
       
       - name: Slack Notify
         if: always()
