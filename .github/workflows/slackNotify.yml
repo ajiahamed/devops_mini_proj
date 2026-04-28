@@ -41,7 +41,7 @@ jobs:
             --url https://api.brevo.com/v2/smtp/email \
             --header "accept: application/json" \
             --header "content-type: application/json" \
-            --header "api-key: $BREVO_KEY" \
+            --header "api-key: $BREVO_API_KEY" \
             --data @payload.json
       
       - name: Slack Notify
