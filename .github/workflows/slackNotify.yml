@@ -1,0 +1,20 @@
+name: Slack Notification Only
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  notify:
+    runs-on: self-hosted   # or ubuntu-latest
+
+    steps:
+      - name: Send Slack Notification
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"text\": \"🚀 Deployment Notification\n*Repo:* $GITHUB_REPOSITORY\n*Branch:* $GITHUB_REF_NAME\n*Status:* SUCCESS\n*Actor:* $GITHUB_ACTOR\"
+          }" \
+          ${{ secrets.SLACK_WEBHOOK }}
