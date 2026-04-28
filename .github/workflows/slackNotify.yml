@@ -67,8 +67,8 @@ jobs:
             --header 'api-key: ${{ secrets.BREVO_API_KEY }}' \
             --header 'content-type: application/json' \
             --data "{
-              \"sender\":{\"name\":\"Github Action\",\"email\":\"your-verified-email@domain.com\"},
-              \"to\":[{\"email\":\"your-personal-email@domain.com\"}],
+              \"sender\":{\"name\":\"Github Action\",\"email\":\"ajiahamed@gmail.com\"},
+              \"to\":[{\"email\":\"ajiahamed@live.com\"}],
               \"subject\":\"$STATUS_ICON Deployment ${{ job.status }} - ${{ github.repository }}\",
               \"htmlContent\":\"$HTML_BODY\"
             }"
