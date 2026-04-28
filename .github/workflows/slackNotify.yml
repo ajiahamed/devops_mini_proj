@@ -1,20 +1,21 @@
-name: Slack Notification Only
-
-on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-
 jobs:
   notify:
-    runs-on: self-hosted   # or ubuntu-latest
+    runs-on: self-hosted
 
     steps:
-      - name: Send Slack Notification
+      - name: Simulate job
+        run: echo "Deploying app..."
+
+      - name: Slack Notify Success
+        if: success()
         run: |
           curl -X POST -H 'Content-type: application/json' \
-          --data "{
-            \"text\": \"🚀 Deployment Notification\n*Repo:* $GITHUB_REPOSITORY\n*Branch:* $GITHUB_REF_NAME\n*Status:* SUCCESS\n*Actor:* $GITHUB_ACTOR\"
-          }" \
+          --data "{\"text\":\"✅ SUCCESS: $GITHUB_REPOSITORY deployed on $GITHUB_REF_NAME\"}" \
+          ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Slack Notify Failure
+        if: failure()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"❌ FAILED: $GITHUB_REPOSITORY on $GITHUB_REF_NAME\"}" \
           ${{ secrets.SLACK_WEBHOOK }}
