@@ -33,13 +33,12 @@ jobs:
 
       # --- Step 4: Slack Alert (Success or Failure) ---
       - name: Slack Notification
-        if: always() 
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_CHANNEL: general
-          SLACK_COLOR: ${{ job.status }} 
-          SLACK_TITLE: "Local VM Deployment Status"
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_TITLE: Local VM Deployment Status
           SLACK_MESSAGE: |
             *Host:* Local-VM-Server
             *Status:* ${{ job.status }}
