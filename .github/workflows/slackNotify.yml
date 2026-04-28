@@ -12,69 +12,79 @@ jobs:
 
     steps:
 
-      - name: Slack Notify Success
-        if: success()
+      - name: Slack Notify
+        if: always()
         run: |
+          # Determine Color and Status Icon based on job status
+          if [[ "${{ job.status }}" == "success" ]]; then
+            COLOR="#2EB67D"
+            STATUS_TEXT="✅ *Deployment Successful*"
+          else
+            COLOR="#E01E5A"
+            STATUS_TEXT="❌ *Deployment Failed*"
+          fi
+
           curl -X POST -H 'Content-type: application/json' \
           --data '{
             "attachments": [
               {
-                "color": "#36a64f",
+                "color": "'"$COLOR"'",
                 "blocks": [
                   {
-                    "type": "section",
+                    "type": "header",
                     "text": {
-                      "type": "mrkdwn",
-                      "text": "*✅ Deployment Successful*"
+                      "type": "plain_text",
+                      "text": "Build Pipeline Notification",
+                      "emoji": true
                     }
                   },
                   {
                     "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "'"$STATUS_TEXT"'"
+                    }
+                  },
+                  {
+                    "type": "divider"
+                  },
+                  {
+                    "type": "section",
                     "fields": [
-                      { "type": "mrkdwn", "text": "*Repository:*\n${{ github.repository }}" },
-                      { "type": "mrkdwn", "text": "*Branch:*\n`${{ github.ref_name }}`" },
-                      { "type": "mrkdwn", "text": "*Actor:*\n${{ github.actor }}" },
-                      { "type": "mrkdwn", "text": "*Event:*\n${{ github.event_name }}" }
+                      { "type": "mrkdwn", "text": "📂 *Repo:*\n${{ github.repository }}" },
+                      { "type": "mrkdwn", "text": "🌿 *Branch:*\n`${{ github.ref_name }}`" }
                     ]
+                  },
+                  {
+                    "type": "section",
+                    "fields": [
+                      { "type": "mrkdwn", "text": "👤 *Actor:*\n${{ github.actor }}" },
+                      { "type": "mrkdwn", "text": "🔢 *Build:*\n#${{ github.run_number }}" }
+                    ]
+                  },
+                  {
+                    "type": "section",
+                    "fields": [
+                      { "type": "mrkdwn", "text": "⚙️ *Event:*\n`${{ github.event_name }}`" },
+                      { "type": "mrkdwn", "text": "📌 *Commit:*\n`${{ github.sha }}`" }
+                    ]
+                  },
+                  {
+                    "type": "divider"
                   },
                   {
                     "type": "actions",
                     "elements": [
                       {
                         "type": "button",
-                        "text": { "type": "plain_text", "text": "View Action" },
+                        "text": { "type": "plain_text", "text": "🔍 View Logs" },
                         "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                      },
+                      {
+                        "type": "button",
+                        "text": { "type": "plain_text", "text": "📦 Github Repo" },
+                        "url": "${{ github.server_url }}/${{ github.repository }}"
                       }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }' ${{ secrets.SLACK_WEBHOOK }}
-
-      - name: Slack Notify Failure
-        if: failure()
-        run: |
-          curl -X POST -H 'Content-type: application/json' \
-          --data '{
-            "attachments": [
-              {
-                "color": "#ff0000",
-                "blocks": [
-                  {
-                    "type": "section",
-                    "text": {
-                      "type": "mrkdwn",
-                      "text": "*❌ Deployment Failed*"
-                    }
-                  },
-                  {
-                    "type": "section",
-                    "fields": [
-                      { "type": "mrkdwn", "text": "*Repository:*\n${{ github.repository }}" },
-                      { "type": "mrkdwn", "text": "*Branch:*\n`${{ github.ref_name }}`" },
-                      { "type": "mrkdwn", "text": "*Actor:*\n${{ github.actor }}" },
-                      { "type": "mrkdwn", "text": "*Commit:*\n`${{ github.sha }}`" }
                     ]
                   }
                 ]
