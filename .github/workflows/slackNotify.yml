@@ -15,15 +15,18 @@ jobs:
       - name: Slack Notify
         if: always()
         run: |
-          # Determine Color and Status Icon based on job status
+          # Set variables based on job status
           if [[ "${{ job.status }}" == "success" ]]; then
             COLOR="#2EB67D"
-            STATUS_TEXT="✅ *Deployment Successful*"
+            ICON="✅"
+            STATUS="Success"
           else
             COLOR="#E01E5A"
-            STATUS_TEXT="❌ *Deployment Failed*"
+            ICON="❌"
+            STATUS="Failed"
           fi
 
+          # Construct the JSON payload
           curl -X POST -H 'Content-type: application/json' \
           --data '{
             "attachments": [
@@ -31,46 +34,21 @@ jobs:
                 "color": "'"$COLOR"'",
                 "blocks": [
                   {
-                    "type": "header",
+                    "type": "section",
                     "text": {
-                      "type": "plain_text",
-                      "text": "Build Pipeline Notification",
-                      "emoji": true
+                      "type": "mrkdwn",
+                      "text": "'"$ICON"' *Deployment '"$STATUS"'* | *Build:* #${{ github.run_number }}"
                     }
+                  },
+                  {
+                    "type": "divider"
                   },
                   {
                     "type": "section",
                     "text": {
                       "type": "mrkdwn",
-                      "text": "'"$STATUS_TEXT"'"
+                      "text": "📂 *Repository:* ${{ github.repository }}\n🌿 *Branch:* `${{ github.ref_name }}`\n👤 *Actor:* ${{ github.actor }}\n⚙️ *Event:* `${{ github.event_name }}`\n📌 *Commit:* `${{ github.sha }}`"
                     }
-                  },
-                  {
-                    "type": "divider"
-                  },
-                  {
-                    "type": "section",
-                    "fields": [
-                      { "type": "mrkdwn", "text": "📂 *Repo:*\n${{ github.repository }}" },
-                      { "type": "mrkdwn", "text": "🌿 *Branch:*\n`${{ github.ref_name }}`" }
-                    ]
-                  },
-                  {
-                    "type": "section",
-                    "fields": [
-                      { "type": "mrkdwn", "text": "👤 *Actor:*\n${{ github.actor }}" },
-                      { "type": "mrkdwn", "text": "🔢 *Build:*\n#${{ github.run_number }}" }
-                    ]
-                  },
-                  {
-                    "type": "section",
-                    "fields": [
-                      { "type": "mrkdwn", "text": "⚙️ *Event:*\n`${{ github.event_name }}`" },
-                      { "type": "mrkdwn", "text": "📌 *Commit:*\n`${{ github.sha }}`" }
-                    ]
-                  },
-                  {
-                    "type": "divider"
                   },
                   {
                     "type": "actions",
@@ -79,11 +57,6 @@ jobs:
                         "type": "button",
                         "text": { "type": "plain_text", "text": "🔍 View Logs" },
                         "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                      },
-                      {
-                        "type": "button",
-                        "text": { "type": "plain_text", "text": "📦 Github Repo" },
-                        "url": "${{ github.server_url }}/${{ github.repository }}"
                       }
                     ]
                   }
