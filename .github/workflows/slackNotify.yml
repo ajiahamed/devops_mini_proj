@@ -1,3 +1,11 @@
+name: Slack Notification Only
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
 jobs:
   notify:
     runs-on: self-hosted
@@ -12,7 +20,6 @@ jobs:
           curl -X POST -H 'Content-type: application/json' \
           --data "{\"text\":\"✅ SUCCESS: $GITHUB_REPOSITORY deployed on $GITHUB_REF_NAME\"}" \
           ${{ secrets.SLACK_WEBHOOK }}
-
       - name: Slack Notify Failure
         if: failure()
         run: |
