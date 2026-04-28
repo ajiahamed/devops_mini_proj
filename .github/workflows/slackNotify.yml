@@ -17,37 +17,54 @@ jobs:
         env:
           BREVO_KEY: ${{ secrets.BREVO_API_KEY }}
         run: |
-          # 1. Define Visuals
-          if [[ "${{ job.status }}" == "success" ]]; then
-            BG_COLOR="#28a745"
-            STATUS_ICON="✅"
-            STATUS_MSG="Pipeline Success"
-          else
-            BG_COLOR="#dc3545"
-            STATUS_ICON="❌"
-            STATUS_MSG="Pipeline Failed"
-          fi
+          # 1. Setup variables
+          STATUS="${{ job.status }}"
+          [ "$STATUS" == "success" ] && COLOR="#28a745" || COLOR="#dc3545"
+          [ "$STATUS" == "success" ] && ICON="✅" || ICON="❌"
 
-          # 2. Build the HTML (Escaping double quotes for JSON safety)
-          HTML_BODY="<div style='font-family: sans-serif; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; max-width: 600px;'><div style='background-color: $BG_COLOR; color: white; padding: 20px; text-align: center;'><h1 style='margin: 0;'>$STATUS_ICON $STATUS_MSG</h1><p style='margin: 5px 0 0;'>Build #${{ github.run_number }}</p></div><div style='padding: 20px; background: #ffffff;'><table style='width: 100%; border-collapse: collapse;'><tr style='border-bottom: 1px solid #eee;'><td style='padding: 10px; font-weight: bold;'>📂 Repository</td><td style='padding: 10px;'>${{ github.repository }}</td></tr><tr style='border-bottom: 1px solid #eee;'><td style='padding: 10px; font-weight: bold;'>🌿 Branch</td><td style='padding: 10px;'><code>${{ github.ref_name }}</code></td></tr><tr style='border-bottom: 1px solid #eee;'><td style='padding: 10px; font-weight: bold;'>👤 Actor</td><td style='padding: 10px;'>${{ github.actor }}</td></tr><tr style='border-bottom: 1px solid #eee;'><td style='padding: 10px; font-weight: bold;'>📌 Commit</td><td style='padding: 10px;'><small><code>${{ github.sha }}</code></small></td></tr></table><div style='margin-top: 20px; text-align: center;'><a href='${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' style='background-color: #0366d6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;'>🔍 View Build Logs</a></div></div></div>"
+          # 2. Build HTML without complex nested quotes
+          HTML="<html><body style='font-family:sans-serif;'>
+            <div style='background:$COLOR;color:white;padding:20px;text-align:center;border-radius:8px 8px 0 0;'>
+              <h1>$ICON Deployment $STATUS</h1>
+            </div>
+            <div style='padding:20px;border:1px solid #ddd;border-top:none;'>
+              <p><b>Repo:</b> ${{ github.repository }}</p>
+              <p><b>Branch:</b> ${{ github.ref_name }}</p>
+              <p><b>Build:</b> #${{ github.run_number }}</p>
+              <p><b>Commit:</b> ${{ github.sha }}</p>
+              <a href='${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' 
+                 style='display:inline-block;padding:10px 20px;background:#0366d6;color:white;text-decoration:none;border-radius:5px;'>View Logs</a>
+            </div>
+          </body></html>"
 
-          # 3. Create a clean JSON file to avoid curl quote nesting issues
-          cat <<EOF > payload.json
-          {
-            "sender": {"name": "nixNtronics CI", "email": "ajiahamed@gmail.com"},
-            "to": [{"email": "ajiahamed@live.com"}],
-            "subject": "$STATUS_ICON Deployment ${{ job.status }} - ${{ github.repository }}",
-            "htmlContent": "$(echo $HTML_BODY | sed 's/"/\\"/g')"
+          # 3. Use a Python script (pre-installed on GH Runners) to send. 
+          # This handles JSON encoding and headers perfectly.
+          python3 - <<EOF
+          import requests
+          import json
+          import os
+
+          api_key = os.getenv('BREVO_KEY')
+          url = "https://api.brevo.com/v3/smtp/email"
+          
+          payload = {
+              "sender": {"name": "nixNtronics CI", "email": "ajiahamed@gmail.com"},
+              "to": [{"email": "ajiahamed@live.com"}],
+              "subject": "$ICON $STATUS: ${{ github.repository }}",
+              "htmlContent": """$HTML"""
           }
-          EOF
+          
+          headers = {
+              "accept": "application/json",
+              "content-type": "application/json",
+              "api-key": api_key
+          }
 
-          # 4. Send using the exact header Brevo requires
-          curl --request POST \
-            --url https://api.brevo.com/v3/smtp/email \
-            --header "accept: application/json" \
-            --header "api-key: $BREVO_KEY" \
-            --header "content-type: application/json" \
-            --data @payload.json
+          response = requests.post(url, headers=headers, data=json.dumps(payload))
+          print(response.text)
+          if response.status_code != 201:
+              exit(1)
+          EOF
       
       - name: Slack Notify
         if: always()
