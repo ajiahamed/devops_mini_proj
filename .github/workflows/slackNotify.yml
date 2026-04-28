@@ -10,7 +10,9 @@ jobs:
   notify:
     runs-on: self-hosted
 
-- name: Slack Notify Success
+    steps:
+
+      - name: Slack Notify Success
         if: success()
         run: |
           curl -X POST -H 'Content-type: application/json' \
