@@ -15,31 +15,24 @@ jobs:
       - name: Send Email Notification
         if: always()
         env:
-          BREVO_KEY: ${{ secrets.BREVO_API_KEY }}
+          # IMPORTANT: Use the "v3 API Key" from the "API Keys" tab in Brevo
+          # NOT the SMTP password.
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
         run: |
-          # 1. Setup variables
           STATUS="${{ job.status }}"
-          if [[ "$STATUS" == "success" ]]; then
-            COLOR="#28a745"; ICON="✅"
-          else
-            COLOR="#dc3545"; ICON="❌"
-          fi
+          [[ "$STATUS" == "success" ]] && COLOR="#28a745" || COLOR="#dc3545"
+          [[ "$STATUS" == "success" ]] && ICON="✅" || ICON="❌"
 
-          # 2. Build the JSON payload into a file to avoid shell escaping issues
-          # Note: Ensure the sender email is verified in your Brevo dashboard!
-          cat <<EOF > payload.json
-          {
-            "sender": {"name": "nixNtronics CI", "email": "ajiahamed@gmail.com"},
-            "to": [{"email": "ajiahamed@live.com"}],
-            "subject": "$ICON $STATUS: ${{ github.repository }}",
-            "htmlContent": "<html><body style='font-family:sans-serif;'><div style='background:$COLOR;color:white;padding:20px;text-align:center;border-radius:8px 8px 0 0;'><h1>$ICON Deployment $STATUS</h1></div><div style='padding:20px;border:1px solid #ddd;border-top:none;'><p><b>Repo:</b> ${{ github.repository }}</p><p><b>Branch:</b> ${{ github.ref_name }}</p><p><b>Build:</b> #${{ github.run_number }}</p><p><b>Commit:</b> ${{ github.sha }}</p><div style='margin-top:20px;text-align:center;'><a href='${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' style='background:#0366d6;color:white;padding:12px 24px;text-decoration:none;border-radius:5px;font-weight:bold;'>🔍 View Build Logs</a></div></div></body></html>"
-          }
-          EOF
-
-          # 3. Execute curl using the file
+          # Use the Transactional Email Endpoint (v3/smtp/email)
+          # Note: sender email MUST be verified in Brevo
           curl --request POST \
             --url https://api.brevo.com/v3/smtp/email \
             --header "accept: application/json" \
             --header "content-type: application/json" \
-            --header "api-key: $BREVO_KEY" \
-            --data @payload.json
+            --header "api-key: $BREVO_API_KEY" \
+            --data "{
+              \"sender\": {\"name\": \"nixNtronics CI\", \"email\": \"ajiahamed@gmail.com\"},
+              \"to\": [{\"email\": \"ajiahamed@live.com\"}],
+              \"subject\": \"$ICON Deployment $STATUS: ${{ github.repository }}\",
+              \"htmlContent\": \"<html><body style='font-family:sans-serif;'><div style='background:$COLOR;color:white;padding:20px;text-align:center;'><h1>$ICON $STATUS</h1></div><p><b>Repo:</b> ${{ github.repository }}<br><b>Branch:</b> ${{ github.ref_name }}<br><b>Build:</b> #${{ github.run_number }}</p><a href='${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' style='background:#0366d6;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;'>View Logs</a></body></html>\"
+            }"
