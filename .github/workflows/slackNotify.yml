@@ -38,10 +38,10 @@ jobs:
 
           # 3. Execute curl using the file
           curl --request POST \
-            --url https://api.brevo.com/v2/smtp/email \
+            --url https://api.brevo.com/v3/smtp/email \
             --header "accept: application/json" \
             --header "content-type: application/json" \
-            --header "api-key: $BREVO_API_KEY" \
+            --header "api-key: $BREVO_KEY" \
             --data @payload.json
       
       - name: Slack Notify
